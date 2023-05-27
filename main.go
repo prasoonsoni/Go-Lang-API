@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"math/rand"
 	"net/http"
 	"strconv"
@@ -20,9 +21,8 @@ type Note struct {
 }
 
 type User struct {
-	Name     string `json:"name"`
-	Email    string `json:"email"`
-	Password string `json:"password"`
+	Name  string `json:"name"`
+	Email string `json:"email"`
 }
 
 // Fake DB
@@ -34,7 +34,26 @@ func (n Note) IsEmpty() bool {
 }
 
 func main() {
+	fmt.Println("API - Notes App")
+	r := mux.NewRouter()
 
+	// seeding data
+	notes = append(notes, Note{Id: "1", Title: "Title1", Description: "Description1", User: &User{Name: "User1", Email: "User1@gmail.com"}})
+	notes = append(notes, Note{Id: "2", Title: "Title2", Description: "Description2", User: &User{Name: "User2", Email: "User2@gmail.com"}})
+	notes = append(notes, Note{Id: "3", Title: "Title3", Description: "Description3", User: &User{Name: "User3", Email: "User3@gmail.com"}})
+	notes = append(notes, Note{Id: "4", Title: "Title4", Description: "Description4", User: &User{Name: "User4", Email: "User4@gmail.com"}})
+
+	// routing
+	r.HandleFunc("/", serveHome).Methods("GET")
+	r.HandleFunc("/notes", getAllNotes).Methods("GET")
+	r.HandleFunc("/note/{id}", getNoteById).Methods("GET")
+	r.HandleFunc("/note", createNote).Methods("POST")
+	r.HandleFunc("/note/{id}", updateNote).Methods("PUT")
+	r.HandleFunc("/note/{id}", deleteNoteById).Methods("DELETE")
+
+	// listen to port
+	log.Fatal(http.ListenAndServe(":3000", r))
+	http.Handle("/", r)
 }
 
 // controllers - file
@@ -45,7 +64,7 @@ func serveHome(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("<h1>Welcome to Notes API</h1>"))
 }
 
-func getAllNotes(w http.ResponseWriter, r *http.Response) {
+func getAllNotes(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("Get all notes")
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(notes)
@@ -62,6 +81,7 @@ func getNoteById(w http.ResponseWriter, r *http.Request) {
 	for _, note := range notes {
 		if note.Id == params["id"] {
 			json.NewEncoder(w).Encode(note)
+			return
 		}
 	}
 	json.NewEncoder(w).Encode("No Note found with given id")
@@ -113,6 +133,7 @@ func updateNote(w http.ResponseWriter, r *http.Request) {
 			note.Id = id
 			notes = append(notes, updated_note)
 			json.NewEncoder(w).Encode(updated_note)
+			return 
 		}
 	}
 	//TODO: send a response when id is not found
@@ -132,5 +153,4 @@ func deleteNoteById(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-
 }
